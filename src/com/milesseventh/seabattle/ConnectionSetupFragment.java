@@ -1,7 +1,5 @@
 package com.milesseventh.seabattle;
 
-import java.net.InetAddress;
-
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -42,14 +40,12 @@ public class ConnectionSetupFragment extends DialogFragment {
 				public void onClick(DialogInterface arg0, int arg1) {
 					final byte[] ip = tryParse(ips);
 					if (ip != null){
-						GameActivity.me.eyeless.ml.game.initiator = true;
 						new Thread(new Runnable(){
 							@Override
 							public void run() {
 								try {
-									GameActivity.me.eyeless.ml.game.client.connect(15000, InetAddress.getByAddress(ip), Game.PORT);
+									GameActivity.me.eyeless.ml.game.communism.connect(ip);
 								} catch (Exception e) {
-									GameActivity.me.eyeless.ml.game.initiator = false;
 									Game.shout("Failed");
 									e.printStackTrace();
 								}

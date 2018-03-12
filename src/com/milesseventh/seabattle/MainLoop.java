@@ -22,8 +22,11 @@ public class MainLoop extends Thread {
 			}
 			c.drawColor(Color.WHITE);
 			game.update(c);
-			if (game.restart)
+			if (game.restart){
+				game.communism.disableServer();
+				game.communism.disableClient();
 				game = new Game(r.width(), r.height());
+			}
 			sh.unlockCanvasAndPost(c);
 		}
 	}

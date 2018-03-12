@@ -25,8 +25,8 @@ public class MenuFragment extends DialogFragment {
 						host.resetSave();
 						host.restart = true;
 					case 1:
-						if (host.client != null)
-							host.client.close();
+						host.communism.disableClient();
+						host.communism.disableServer();
 					}
 				}
 			});

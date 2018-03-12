@@ -4,12 +4,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-
-import com.esotericsoftware.kryonet.Client;
-import com.esotericsoftware.kryonet.Connection;
-import com.esotericsoftware.kryonet.Listener;
-import com.esotericsoftware.kryonet.Server;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -35,18 +29,13 @@ public class Game {
 	public boolean restart = false;
 	
 	public State gameState = State.ARRANGING;
-	public boolean resumed = false;
 	public Vector carriage, rotationPlacer;
 	public Field enemyF, myF;
 	public Button[] pad;
-	public int[] configuration = {4, 3, 3, 2, 2, 2, 1, 1, 1, 1};//{5, 4, 3, 3, 2};
+	public int[] configuration = {5, 4, 3, 3, 2};//;{4, 3, 3, 2, 2, 2, 1, 1, 1, 1}
 	public int placerOffset = 0;
 	
-	public static final int PORT = 7711;
-	public static byte[] opponent = {0, 0, 0, 0};
-	public Client client;
-	public Server server;
-	public boolean initiator = false;
+	public Communicator communism;
 	
 	public Game(int w, int h){
 		pain.setColor(Color.BLACK);
@@ -109,127 +98,40 @@ public class Game {
 				}
 		};
 		
-		if (load()){
-			try {
-				client.connect(15000, InetAddress.getByAddress(opponent), PORT);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
-	
-	public void initConnection(){
-		if (server != null){
-			server.close();
-			server.stop();
-		}
-		if (client != null){
-			client.close();
-			client.stop();
-		}
-		server = new Server();
-		server.start(); 
-		try{
-			server.bind(PORT);
-		} catch (Exception e){}
-		server.getKryo().register(Message.class);
-		server.getKryo().register(Message.Command.class);
-		server.getKryo().register(Field.class);
-		server.getKryo().register(Field.CellState.class);
-		server.getKryo().register(Field.CellState[].class);
-		server.getKryo().register(Vector.class);
-		server.getKryo().register(java.util.Locale.class);
-		server.getKryo().register(int[].class);
-		
-		client = new Client();
-		client.start();
-		client.getKryo().register(Message.class);
-		client.getKryo().register(Message.Command.class);
-		client.getKryo().register(Field.class);
-		client.getKryo().register(Field.CellState.class);
-		client.getKryo().register(Field.CellState[].class);
-		client.getKryo().register(Vector.class);
-		client.getKryo().register(java.util.Locale.class);
-		client.getKryo().register(int[].class);
-		
-		server.addListener(new Listener(){
+		communism = new Communicator(this){
 			@Override
-			public void connected(Connection c){
-				if (resumed)
-					load();
-				if (!initiator){
-					opponent = c.getRemoteAddressTCP().getAddress().getAddress();
-					try {
-						client.connect(15000, InetAddress.getByAddress(opponent), PORT);
-					} catch (Exception e) {
-						c.close();
-					}
-				}
-				initiator = false;
-			}
-			
-			@Override
-			public void received(Connection c, Object data){
-				if (!(data instanceof Message))
-					return;
-				try {
-					Message m = (Message) data;
-					switch (m.command){
-					case HANDSHAKE:
-						enemyF.cells = m.f.cells;
-						enemyF.shipID = m.f.shipID;
-						if (!compareConfigs(m.config, configuration))
-							shout("Warning: Using different configurations");
-						if (!initiator)
-							gameState = State.PLAYING;
-						break;
-					case HIT:
-						Field.HitResponce hr = myF.hitMe(m.x, m.y);
-						if (hr.equals(Field.HitResponce.MISS))
-							gameState = State.PLAYING;
-						save();
-						if (!myF.anyShipsLeft()){
-							gameState = State.CELEBRATING;
-							resetSave();
-							shout("You lost!");
-						}
-						break;
-					}
-				} catch(Exception e) {}
-			}
-			
-			@Override
-			public void disconnected(Connection c){
-				client.close();
-			}
-		});
-		client.addListener(new Listener(){
-			@Override
-			public void connected(Connection c){
-				shout("Established connection with " + c.getRemoteAddressTCP().getAddress().getHostAddress());
-				opponent = c.getRemoteAddressTCP().getAddress().getAddress();
-				if (!resumed)
-					gameState = State.WAITING;
-				Message m = new Message();
-				m.command = Message.Command.HANDSHAKE;
-				m.f = myF;
-				m.config = configuration;
-				client.sendTCP(m);
-			}
-			@Override
-			public void disconnected(Connection c){
-				shout("Connection lost");
+			public void hitReceived(int x, int y) {
+				Field.HitResponce hr = myF.hitMe(x, y);
+				if (hr.equals(Field.HitResponce.MISS))
+					gameState = State.PLAYING;
 				save();
-				gameState = State.CONNECTING;
+				if (!myF.anyShipsLeft()){
+					gameState = State.CELEBRATING;
+					resetSave();
+					shout("You lost!");
+				}
 			}
-		});
+
+			@Override
+			public void handshakeReceived(Field f, int[] config) {
+				enemyF.cells = f.cells;
+				enemyF.shipID = f.shipID;
+				shout("Handshake received");
+				if (!compareConfigs(config, configuration))
+					shout("Warning: Using different configurations");
+			}
+		};
+		
+		load();
+		//if (load())
+			//communism.connect(communism.opponent.getRemoteAddressTCP().getAddress().getAddress());//TODO: Load opponent address from save
 	}
 	
 	public void update(Canvas canvas){
+		canvas.drawText(gameState.name(), 10, 10, pain);
 		canvas.translate(0, canvas.getHeight());
 		canvas.scale(1, -1);
 		canvas.translate(0, (canvas.getHeight() - myF.rectSize.y) / 2f);
-		//canvas.drawText(isConnected.name(), canvas.getWidth() / 2f, canvas.getHeight() / 2f, pain);
 		enemyF.render(canvas, gameState);
 		myF.render(canvas, gameState);
 		
@@ -271,7 +173,7 @@ public class Game {
 			if (myF.place(carriage, rotationPlacer, configuration[placerOffset], placerOffset)){
 				++placerOffset;
 				if (placerOffset >= configuration.length){
-					initConnection();
+					communism.startListening();
 					gameState = State.CONNECTING;
 					shout("Press central button to connect");
 				}
@@ -283,17 +185,12 @@ public class Game {
 			csf.show(GameActivity.me.getFragmentManager(), "...");
 			break;
 		case PLAYING:
-			//myF.hitMe(Math.round(carriage.x), Math.round(carriage.y));
 			Field.HitResponce hr = enemyF.hitMe(Math.round(carriage.x), Math.round(carriage.y));
 			switch(hr){
 			case MISS:
 				gameState = State.WAITING;
 			case HIT:
-				Message m = new Message();
-				m.command = Message.Command.HIT;
-				m.x = Math.round(carriage.x);
-				m.y = Math.round(carriage.y);
-				client.sendTCP(m);
+				communism.send(Math.round(carriage.x), Math.round(carriage.y));
 				save();
 				if (!enemyF.anyShipsLeft()){
 					gameState = State.CELEBRATING;
@@ -305,6 +202,8 @@ public class Game {
 				break;
 			}
 			break;
+		case CELEBRATING:
+			restart = true;
 		default:
 			break;
 		}
@@ -332,7 +231,7 @@ public class Game {
 		});
 	}
 	
-	private static final boolean KEEP_STATE = false;
+	private static final boolean KEEP_STATE = true;
 	
 	public void save(){
 		if (!KEEP_STATE)
@@ -345,14 +244,12 @@ public class Game {
 			sb.config = configuration;
 			sb.placerOffset = placerOffset;
 		case CONNECTING:
-			initConnection();
 			sb.f = myF;
 			break;
 		case PLAYING:
 		case WAITING:
-			initConnection();
 			sb.f = myF;
-			sb.opponent = opponent;
+			//sb.opponent = opponent;
 			break;
 		default:
 			break;
@@ -368,7 +265,9 @@ public class Game {
 			e.printStackTrace();
 		}
 	}
-	
+
+	public boolean resumed = false;
+	public boolean loadedGameStateIsActive = false;
 	public boolean load(){
 		if (!KEEP_STATE)
 			return false;
@@ -387,18 +286,27 @@ public class Game {
 			return false;
 		}
 		
-		gameState = sb.gameState;
-		switch (gameState){
+		switch (sb.gameState){
 		case ARRANGING:
 			configuration = sb.config;
 			placerOffset = sb.placerOffset;
+			gameState = sb.gameState;
 		case CONNECTING:
 			myF = sb.f;
+			gameState = sb.gameState;
+			communism.startListening();
 			break;
 		case PLAYING:
+			myF = sb.f;
+			gameState = State.CONNECTING;
+			loadedGameStateIsActive = true;
+			communism.startListening();
+			break;
 		case WAITING:
 			myF = sb.f;
-			opponent = sb.opponent;
+			gameState = State.CONNECTING;
+			loadedGameStateIsActive = false;
+			communism.startListening();
 			break;
 		default:
 			break;
