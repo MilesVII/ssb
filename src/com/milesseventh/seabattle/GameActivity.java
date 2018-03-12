@@ -65,11 +65,11 @@ public class GameActivity extends Activity{
 	
 	@Override
 	public void onDestroy(){
-		if (Game.client != null){
-			Game.client.close();
-			Game.client.stop();
-			Game.server.close();
-			Game.server.stop();
+		if (eyeless.ml.game != null && eyeless.ml.game.client != null){
+			eyeless.ml.game.client.close();
+			eyeless.ml.game.client.stop();
+			eyeless.ml.game.server.close();
+			eyeless.ml.game.server.stop();
 		}
 		super.onDestroy();
 	}

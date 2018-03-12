@@ -25,8 +25,8 @@ public class MenuFragment extends DialogFragment {
 						host.resetSave();
 						host.restart = true;
 					case 1:
-						if (Game.client != null)
-							Game.client.close();
+						if (host.client != null)
+							host.client.close();
 					}
 				}
 			});

@@ -42,14 +42,14 @@ public class ConnectionSetupFragment extends DialogFragment {
 				public void onClick(DialogInterface arg0, int arg1) {
 					final byte[] ip = tryParse(ips);
 					if (ip != null){
-						Game.initiator = true;
+						GameActivity.me.eyeless.ml.game.initiator = true;
 						new Thread(new Runnable(){
 							@Override
 							public void run() {
 								try {
-									Game.client.connect(15000, InetAddress.getByAddress(ip), Game.PORT);
+									GameActivity.me.eyeless.ml.game.client.connect(15000, InetAddress.getByAddress(ip), Game.PORT);
 								} catch (Exception e) {
-									Game.initiator = false;
+									GameActivity.me.eyeless.ml.game.initiator = false;
 									Game.shout("Failed");
 									e.printStackTrace();
 								}

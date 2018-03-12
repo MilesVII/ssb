@@ -23,7 +23,7 @@ public class Game {
 		ARRANGING, CONNECTING, PLAYING, WAITING, CELEBRATING
 	}
 	public static final int SEVENTH_COLOR = Color.rgb(218, 64, 0);
-	public static Object hachiko = new Object();
+	//public static Object hachiko = new Object();
 	
 	public Paint pain      = new Paint(), 
 	             titlePain = new Paint();
@@ -44,9 +44,9 @@ public class Game {
 	
 	public static final int PORT = 7711;
 	public static byte[] opponent = {0, 0, 0, 0};
-	public static Client client;
-	public static Server server;
-	public static boolean initiator = false;
+	public Client client;
+	public Server server;
+	public boolean initiator = false;
 	
 	public Game(int w, int h){
 		pain.setColor(Color.BLACK);
@@ -163,9 +163,9 @@ public class Game {
 						client.connect(15000, InetAddress.getByAddress(opponent), PORT);
 					} catch (Exception e) {
 						c.close();
-						
 					}
 				}
+				initiator = false;
 			}
 			
 			@Override
@@ -309,6 +309,7 @@ public class Game {
 			break;
 		}
 	}
+	
 	public float clamp(float x, float min, float max){
 		return Math.min(Math.max(min, x), max);
 	}
