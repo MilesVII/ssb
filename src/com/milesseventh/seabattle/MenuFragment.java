@@ -27,6 +27,7 @@ public class MenuFragment extends DialogFragment {
 					case 1:
 						host.communism.disableClient();
 						host.communism.disableServer();
+						host.communism.startListening();
 					}
 				}
 			});

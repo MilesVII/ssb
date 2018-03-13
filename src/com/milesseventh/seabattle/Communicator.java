@@ -35,11 +35,15 @@ public abstract class Communicator {
 				Game.shout("Established connection with " + c.getRemoteAddressTCP().getAddress().getHostAddress());
 				isClient = true;
 				opponent = c;
-				
+				//c.setKeepAliveTCP(12000);
 				Message m = new Message();
 				m.command = Message.Command.HANDSHAKE;
 				m.f = host.myF;
 				m.config = host.configuration;
+				if (host.resumed)
+					m.myturn = host.loadedGameStateIsActive;
+				else
+					m.myturn = false;
 				client.sendTCP(m);
 				
 				disableServer();
@@ -74,7 +78,6 @@ public abstract class Communicator {
 	private void initServer(){
 		if (server != null)
 			return;
-		
 		server = new Server();
 		registerClasses(server.getKryo());
 		try{
@@ -86,7 +89,7 @@ public abstract class Communicator {
 				Game.shout("Established connection with " + c.getRemoteAddressTCP().getAddress().getHostAddress());
 				isClient = false;
 				opponent = c;
-				
+				//c.setKeepAliveTCP(7000);
 				Message m = new Message();
 				m.command = Message.Command.HANDSHAKE;
 				m.f = host.myF;
@@ -94,13 +97,14 @@ public abstract class Communicator {
 				server.sendToTCP(c.getID(), m);
 				disableClient();
 				
-				if (host.resumed)//TODO: Code dublication
+				host.gameState = Game.State.WAITING;
+				/*if (host.resumed)
 					if (host.loadedGameStateIsActive)
 						host.gameState = Game.State.PLAYING;
 					else
 						host.gameState = Game.State.WAITING;
 				else
-					host.gameState = Game.State.PLAYING;
+					host.gameState = Game.State.PLAYING;*/
 			}
 			
 			@Override
@@ -124,6 +128,8 @@ public abstract class Communicator {
 	private void messageReceived(Message m){
 		switch (m.command){
 		case HANDSHAKE:
+			if (!isClient)
+				host.gameState = m.myturn ? Game.State.WAITING : Game.State.PLAYING;
 			handshakeReceived(m.f, m.config);
 			break;
 		case HIT:
@@ -133,10 +139,12 @@ public abstract class Communicator {
 	}
 	
 	private void connectionLost(){
-		Game.shout("Connection lost");
-		host.resumed = true;
-		host.loadedGameStateIsActive = host.gameState.equals(Game.State.PLAYING);
-		host.gameState = State.CONNECTING;
+		if (host.gameState != Game.State.CELEBRATING){
+			Game.shout("Connection lost");
+			host.resumed = true;
+			host.loadedGameStateIsActive = host.gameState.equals(Game.State.PLAYING);
+			host.gameState = State.CONNECTING;
+		}
 		
 		if (isClient){
 			startListening();
@@ -148,7 +156,7 @@ public abstract class Communicator {
 		initClient();
 		try {
 			client.start();
-			client.connect(1000, InetAddress.getByAddress(ip), PORT);
+			client.connect(17000, InetAddress.getByAddress(ip), PORT);
 		} catch (Exception e) {
 			Game.shout("Failed");
 			e.printStackTrace();
@@ -180,6 +188,7 @@ public abstract class Communicator {
 			} catch (NullPointerException npe){}
 			server = null;
 		}
+		killEveryServer();
 	}
 	
 	public void disableClient(){
@@ -217,12 +226,4 @@ public abstract class Communicator {
 
 	public abstract void hitReceived(int x, int y);
 	public abstract void handshakeReceived(Field f, int[] config);
-	/*
-					switch (m.command){
-					case HANDSHAKE:
-						
-						break;
-					case HIT:
-						break;
-					}*/
 }

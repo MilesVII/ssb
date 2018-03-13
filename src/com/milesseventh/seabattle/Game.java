@@ -4,6 +4,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -17,7 +19,7 @@ public class Game {
 		ARRANGING, CONNECTING, PLAYING, WAITING, CELEBRATING
 	}
 	public static final int SEVENTH_COLOR = Color.rgb(218, 64, 0);
-	//public static Object hachiko = new Object();
+	//public Object hachiko = new Object();
 	
 	public Paint pain      = new Paint(), 
 	             titlePain = new Paint();
@@ -32,7 +34,7 @@ public class Game {
 	public Vector carriage, rotationPlacer;
 	public Field enemyF, myF;
 	public Button[] pad;
-	public int[] configuration = {5, 4, 3, 3, 2};//;{4, 3, 3, 2, 2, 2, 1, 1, 1, 1}
+	public int[] configuration = {5, 4, 3, 3, 1};
 	public int placerOffset = 0;
 	
 	public Communicator communism;
@@ -122,11 +124,13 @@ public class Game {
 			}
 		};
 		
-		load();
-		//if (load())
-			//communism.connect(communism.opponent.getRemoteAddressTCP().getAddress().getAddress());//TODO: Load opponent address from save
+		if (!load()){
+			cf = new ConfiguratorFragment(this);
+			cf.show(GameActivity.me.getFragmentManager(), "...");
+		}
 	}
 	
+	private ConfiguratorFragment cf;
 	public void update(Canvas canvas){
 		canvas.drawText(gameState.name(), 10, 10, pain);
 		canvas.translate(0, canvas.getHeight());
@@ -239,9 +243,9 @@ public class Game {
 		
 		StateBox sb = new StateBox();
 		sb.gameState = gameState;
+		sb.config = configuration;
 		switch(gameState){
 		case ARRANGING:
-			sb.config = configuration;
 			sb.placerOffset = placerOffset;
 		case CONNECTING:
 			sb.f = myF;
@@ -282,28 +286,30 @@ public class Game {
 			if (sb == null)
 				return false;
 		} catch (Exception e) {
-			e.printStackTrace();
 			return false;
 		}
 		
+		configuration = sb.config;
 		switch (sb.gameState){
 		case ARRANGING:
-			configuration = sb.config;
 			placerOffset = sb.placerOffset;
 			gameState = sb.gameState;
 		case CONNECTING:
+			configuration = sb.config;
 			myF = sb.f;
 			gameState = sb.gameState;
 			communism.startListening();
 			break;
 		case PLAYING:
 			myF = sb.f;
+			resumed = true;
 			gameState = State.CONNECTING;
 			loadedGameStateIsActive = true;
 			communism.startListening();
 			break;
 		case WAITING:
 			myF = sb.f;
+			resumed = true;
 			gameState = State.CONNECTING;
 			loadedGameStateIsActive = false;
 			communism.startListening();
@@ -312,7 +318,6 @@ public class Game {
 			break;
 		}
 		
-		resumed = true;
 		return true;
 	}
 	

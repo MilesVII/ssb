@@ -8,4 +8,5 @@ public class Message {
 	public Field f;
 	public int[] config;
 	public int x, y;
+	public boolean myturn;
 }

@@ -3,6 +3,7 @@ package com.milesseventh.seabattle;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -48,6 +49,10 @@ public class GameActivity extends Activity{
 
 		@Override
 		public void surfaceDestroyed(SurfaceHolder arg0){
+			if (ml != null && eyeless.ml.game != null){
+				ml.game.communism.disableServer();
+				ml.game.communism.disableClient();
+			}
 			ml.running = false;
 		}
 	}
@@ -58,18 +63,11 @@ public class GameActivity extends Activity{
 	protected void onCreate(Bundle savedInstanceState){
 		me = this;
 		super.onCreate(savedInstanceState);
-		this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-		eyeless = new HarvesterOfEyes(this);
-		setContentView(eyeless);
-	}
-	
-	@Override
-	public void onDestroy(){
-		if (eyeless.ml != null && eyeless.ml.game != null){
-			eyeless.ml.game.communism.disableServer();
-			eyeless.ml.game.communism.disableClient();
+		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+		if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE){
+			eyeless = new HarvesterOfEyes(this);
+			setContentView(eyeless);
 		}
-		super.onDestroy();
 	}
 	
 	@Override
